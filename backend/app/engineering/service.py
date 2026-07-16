@@ -1,13 +1,11 @@
 import asyncio
-import socket
+import os
 import subprocess
-import sys
-import uuid
 import difflib
 from pathlib import Path
 from app.engineering.models import CodeReview, Patch, Repository, RepositoryAnalysis
 class EngineeringService:
-    def __init__(self,provider):self.repositories={};self.patches=[];self.reviews=[];self.provider=provider;self._preview_processes={}
+    def __init__(self,provider):self.repositories={};self.patches=[];self.reviews=[];self.provider=provider
     async def create_repository(self,workspace:str,project_id:str|None=None)->Repository:
         path=Path(workspace).resolve()
         if not path.exists() or not path.is_dir():raise ValueError('Workspace must be an existing directory')
@@ -31,27 +29,32 @@ class EngineeringService:
         return target.read_text(encoding='utf-8')
     def _frontend_root(self,repo:Repository)->Path|None:
         root=Path(repo.workspace);candidate=root/'frontend';return candidate if (candidate/'package.json').is_file() else (root if (root/'package.json').is_file() else None)
-    def _preview_port(self,repo:Repository)->int:
-        if repo.project_id:
-            return 4500+(uuid.UUID(repo.project_id).int % 400)
-        for port in range(4500,4900):
-            with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as probe:
-                if probe.connect_ex(('127.0.0.1',port))!=0:return port
-        raise ValueError('No local preview port is available')
-    async def ensure_preview(self,repo:Repository)->str|None:
+    def _preview_prefix(self,repo:Repository)->str:
+        return f'/api/v1/repository/{repo.repository_id}/preview/'
+    def _preview_is_stale(self,frontend:Path,output:Path)->bool:
+        index=output/'index.html'
+        if not index.is_file(): return True
+        sources=[frontend/'index.html',frontend/'package.json',frontend/'vite.config.js',frontend/'vite.config.ts']
+        source_dir=frontend/'src'
+        if source_dir.is_dir(): sources.extend(path for path in source_dir.rglob('*') if path.is_file())
+        return any(path.is_file() and path.stat().st_mtime > index.stat().st_mtime for path in sources)
+    async def build_preview(self,repo:Repository)->Path:
         frontend=self._frontend_root(repo)
-        if frontend is None:return None
-        process=self._preview_processes.get(repo.repository_id)
-        if process and process.poll() is None:return repo.preview_url
-        port=self._preview_port(repo);npm='npm.cmd' if sys.platform=='win32' else 'npm'
-        with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as probe:
-            if probe.connect_ex(('127.0.0.1',port))==0:raise ValueError('This project preview port is already occupied')
+        if frontend is None: raise ValueError('This generated workspace does not contain a frontend preview yet')
+        output=frontend/'dist'
+        if not self._preview_is_stale(frontend,output): return output
+        npm='npm.cmd' if os.name=='nt' else 'npm'
         if not (frontend/'node_modules').is_dir():
             await asyncio.to_thread(subprocess.run,[npm,'install'],cwd=frontend,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
-        startupinfo=None
-        if sys.platform=='win32':startupinfo=subprocess.STARTUPINFO();startupinfo.dwFlags|=subprocess.STARTF_USESHOWWINDOW
-        process=subprocess.Popen([npm,'run','dev','--','--port',str(port),'--host','127.0.0.1','--strictPort'],cwd=frontend,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,startupinfo=startupinfo)
-        self._preview_processes[repo.repository_id]=process;repo.preview_url=f'http://127.0.0.1:{port}';return repo.preview_url
+        vite=frontend/'node_modules'/'.bin'/('vite.cmd' if os.name=='nt' else 'vite')
+        if not vite.is_file(): raise ValueError('Preview dependencies are still installing. Please wait a moment and try again.')
+        await asyncio.to_thread(subprocess.run,[str(vite),'build','--base',self._preview_prefix(repo)],cwd=frontend,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
+        if not (output/'index.html').is_file(): raise ValueError('The generated preview build did not produce an index page')
+        return output
+    async def ensure_preview(self,repo:Repository)->str:
+        await self.build_preview(repo)
+        repo.preview_url=self._preview_prefix(repo)
+        return repo.preview_url
     async def tree(self,repo:Repository)->list[str]:return [str(p.relative_to(repo.workspace)) for p in Path(repo.workspace).rglob('*') if '.git' not in p.parts and 'node_modules' not in p.parts and p.is_file()][:2000]
     async def analyze(self,repo:Repository)->RepositoryAnalysis:
         tree=await self.tree(repo);deps=[];framework=language=None

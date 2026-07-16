@@ -1,6 +1,7 @@
 import asyncio
 import subprocess
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from app.engineering.models import EngineeringStart
 from app.runtime.container import runtime
@@ -38,6 +39,17 @@ async def preview(repository_id:str):
     if not repo:raise HTTPException(404,'Repository not found')
     try:return {'url':await runtime.engineering.ensure_preview(repo)}
     except (ValueError,subprocess.SubprocessError) as error:raise HTTPException(422,str(error))
+@router.get('/repository/{repository_id}/preview/{asset_path:path}',include_in_schema=False)
+async def preview_asset(repository_id:str,asset_path:str=''):
+    repo=await runtime.engineering.get_repository(repository_id)
+    if not repo:raise HTTPException(404,'Repository not found')
+    try:
+        preview_root=(await runtime.engineering.build_preview(repo)).resolve()
+    except (ValueError,subprocess.SubprocessError) as error:raise HTTPException(422,str(error))
+    requested=(preview_root/asset_path).resolve()
+    if asset_path and preview_root in requested.parents and requested.is_file():
+        return FileResponse(requested)
+    return FileResponse(preview_root/'index.html')
 @router.post('/engineering/start',status_code=202)
 async def start(payload:EngineeringStart):
     try:return await runtime.engineering.start(payload,runtime.event_bus)
