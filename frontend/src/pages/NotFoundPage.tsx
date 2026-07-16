@@ -1,0 +1,1 @@
+import { Link } from 'react-router-dom'; export const NotFoundPage=()=> <main className="grid min-h-screen place-items-center"><div><h1 className="text-4xl font-semibold">404</h1><Link className="underline" to="/">Back home</Link></div></main>;

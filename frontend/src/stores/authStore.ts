@@ -1,0 +1,3 @@
+import { create } from 'zustand'; import { createJSONStorage, persist } from 'zustand/middleware'; import type { AuthResponse, User } from '../types/auth';
+type AuthState = { user: User | null; accessToken: string | null; refreshToken: string | null; setSession: (session: AuthResponse) => void; logout: () => void };
+export const useAuthStore = create<AuthState>()(persist((set) => ({ user: null, accessToken: null, refreshToken: null, setSession: ({user,access_token,refresh_token}) => set({user,accessToken:access_token,refreshToken:refresh_token}), logout: () => set({user:null,accessToken:null,refreshToken:null}) }), { name: 'crewos-auth-session', storage: createJSONStorage(() => sessionStorage) }));

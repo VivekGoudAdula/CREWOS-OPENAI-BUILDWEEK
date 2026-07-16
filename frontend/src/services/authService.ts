@@ -1,0 +1,2 @@
+import { api } from './api'; import type { AuthResponse, User } from '../types/auth';
+export const authService = { register: (payload: {email:string; full_name:string; password:string}) => api.post<AuthResponse>('/auth/register', payload).then(r=>r.data), login: (payload: {email:string; password:string}) => api.post<AuthResponse>('/auth/login', payload).then(r=>r.data), me: () => api.get<User>('/auth/me').then(r=>r.data) };
