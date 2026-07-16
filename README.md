@@ -2,6 +2,8 @@
 
 > An autonomous AI software company that turns a product idea into a project plan, generated workspace, source code, and a live local preview.
 
+![CrewOS landing page](frontend/public/img.png)
+
 CrewOS is a full-stack platform for observing an AI company at work. Start in **Chat** with a product idea; CrewOS plans the work through its runtime, creates a dedicated project workspace, generates source code through Azure OpenAI, and exposes the generated application inside the Engineering workspace.
 
 ## What it does
@@ -86,6 +88,47 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+## End-to-end demo project
+
+Use this flow for a complete local demo. It requires MongoDB and valid Azure OpenAI credentials in `backend/.env`.
+
+1. Start MongoDB, the backend, and the frontend using the commands above.
+2. Open `http://localhost:5173`, select **Start building**, and register a demo account:
+
+   ```text
+   Name: Demo Operator
+   Email: demo@crewos.local
+   Password: CrewOS-demo-2026
+   ```
+
+3. In **Chat**, submit this project brief:
+
+   ```text
+   Build a premium food delivery marketplace for urban professionals.
+   Include restaurant discovery, dietary filters, live order tracking,
+   merchant menus, payments, and saved favourites.
+   ```
+
+4. Watch the CEO and Product Manager complete strategy and roadmap creation.
+5. Open the completed project from **Projects**, then select **Open generated workspace**.
+6. In **Engineering**, inspect the generated source tree and open the **Live generated UI** preview.
+
+No seed database is required. The demo account, planning record, event history, workspace, and generated source files are created by this flow. Generated workspaces are stored under `backend/project_workspaces/` and are intentionally ignored by Git.
+
+### Quick API smoke check
+
+With the backend running, verify the service first:
+
+```powershell
+Invoke-RestMethod http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{ "status": "healthy" }
+```
+
 ## Product flow
 
 1. Register or sign in. CrewOS opens **Chat**.
@@ -127,3 +170,28 @@ npm run build
 ## Current scope
 
 CrewOS is a development-stage autonomous software-company environment. Planning, runtime coordination, code generation, workspace inspection, and local preview are included. Production deployment, CI/CD, and customer release automation are intentionally outside this repository’s current scope.
+
+## How Codex Was Used
+
+Codex was used as an implementation partner to accelerate the build while the project team retained responsibility for the product direction and architectural constraints.
+
+### Components accelerated by Codex
+
+- FastAPI module scaffolding, route wiring, Pydantic contracts, and frontend React page structure.
+- Authentication integration, environment configuration, MongoDB connection handling, and test scaffolding.
+- Enterprise UI refinement for the application shell, Chat experience, project archive, Engineering workspace, source viewer, and embedded preview panel.
+- Azure OpenAI provider integration, generated-workspace support, patch/diff mechanics, and preview-server wiring.
+- Debugging help for bcrypt/Passlib compatibility, Vite import failures, stale workspace IDs after reloads, and project-specific preview routing.
+- Documentation, `.gitignore`, and the local demo workflow in this README.
+
+### Architectural decisions made by the project team
+
+- **Event-driven runtime:** agents communicate through a reusable event bus rather than direct method-to-method agent chains.
+- **Agent responsibility boundaries:** CEO owns strategy, PM owns roadmap generation, Engineering owns workspace/code generation, and QA remains a separate validation concern.
+- **Provider abstraction:** model calls are isolated behind a code-generation provider so agent code is not coupled to Azure OpenAI.
+- **Workspace isolation:** each project receives its own generated source directory and preview process rather than overwriting the CrewOS application.
+- **Product-first UI:** runtime, registry, memory, and event views are kept as developer diagnostics while the main product flow focuses on Chat, Projects, Engineering, and previewable output.
+
+### Where Codex improved iteration speed
+
+Codex was especially effective during repeated full-stack iteration: tracing runtime event loops that blocked planning, converting the generated workspace into a runnable Vite app, repairing missing generated stylesheet imports, and making previews resolve to the correct project rather than a shared development server. These changes shortened the feedback loop between an AI-generated artifact and a visible, inspectable product result.
