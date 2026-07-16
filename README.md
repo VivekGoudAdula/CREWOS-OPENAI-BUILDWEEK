@@ -36,7 +36,20 @@ Codex shortened the loop between an idea, a working full-stack implementation, a
 - Autonomous project planning: strategy, epics, tasks, milestones, dependencies, timeline, and project archive.
 - Project-specific Engineering workspaces with repository tree, readable source files, patch history, and local live-preview support.
 - Azure OpenAI-backed code generation provider—kept behind an interface so the runtime is not tied to one model provider.
+- Quality Validation Center that runs available unit, static, and integration checks against generated workspaces; failures create assigned bug records and a patch can be revalidated after an engineering update.
 - Enterprise-style React UI for Chat, Projects, Mission Control, Engineering, Quality, Analytics, and developer diagnostics.
+
+## Quality loop: validate, report, fix, retest
+
+Quality is a first-class department rather than a decorative dashboard. From **Quality**, select **Run latest validation** after Engineering has produced a patch. CrewOS then:
+
+1. Derives a test plan from the generated workspace and changed files.
+2. Runs applicable unit, static, and integration commands.
+3. Creates an assigned bug record for each failed command, including output and a reproduction command.
+4. Produces an approval or needs-changes quality report.
+5. Lets Engineering update the workspace and rerun the same validation flow for regression review.
+
+This loop is visible in the Quality pipeline, Quality Reports, and Bug Center. QA currently requires the validation action from the UI; automatic remediation is intentionally not represented as completed work.
 
 ## Feature tour
 
@@ -106,8 +119,10 @@ CORS_ORIGINS=http://localhost:5173
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-key
 AZURE_API_VERSION=your-supported-api-version
-AZURE_GPT_DEPLOYMENT=your-deployment-name
+AZURE_GPT_DEPLOYMENT=your-gpt-5.6-deployment
 ```
+
+For the hackathon demo, configure `AZURE_GPT_DEPLOYMENT` to the Azure deployment backed by **GPT-5.6**. CrewOS does not hardcode a model name: the deployment remains configurable so the provider can be changed without modifying runtime agents.
 
 The frontend uses `http://localhost:8000/api/v1` by default. To override it, add `frontend/.env`:
 
@@ -206,6 +221,7 @@ npm run build
 - Generated workspaces are local development artifacts. They are not deployed products.
 - The code-generation provider requires valid Azure OpenAI credentials; without them, Engineering reports the provider error rather than fabricating files.
 - Local previews run independently per generated workspace. They are intended for development review, not production hosting.
+- This repository is currently local-first. For judging, provide a hosted instance or private demo credentials/deployment access in the submission notes so reviewers can exercise code generation and QA without configuring their own Azure account.
 
 ## Key API areas
 
@@ -219,28 +235,3 @@ npm run build
 ## Current scope
 
 CrewOS is a development-stage autonomous software-company environment. Planning, runtime coordination, code generation, workspace inspection, and local preview are included. Production deployment, CI/CD, and customer release automation are intentionally outside this repository’s current scope.
-
-## How Codex Was Used
-
-Codex was used as an implementation partner to accelerate the build while the project team retained responsibility for the product direction and architectural constraints.
-
-### Components accelerated by Codex
-
-- FastAPI module scaffolding, route wiring, Pydantic contracts, and frontend React page structure.
-- Authentication integration, environment configuration, MongoDB connection handling, and test scaffolding.
-- Enterprise UI refinement for the application shell, Chat experience, project archive, Engineering workspace, source viewer, and embedded preview panel.
-- Azure OpenAI provider integration, generated-workspace support, patch/diff mechanics, and preview-server wiring.
-- Debugging help for bcrypt/Passlib compatibility, Vite import failures, stale workspace IDs after reloads, and project-specific preview routing.
-- Documentation, `.gitignore`, and the local demo workflow in this README.
-
-### Architectural decisions made by the project team
-
-- **Event-driven runtime:** agents communicate through a reusable event bus rather than direct method-to-method agent chains.
-- **Agent responsibility boundaries:** CEO owns strategy, PM owns roadmap generation, Engineering owns workspace/code generation, and QA remains a separate validation concern.
-- **Provider abstraction:** model calls are isolated behind a code-generation provider so agent code is not coupled to Azure OpenAI.
-- **Workspace isolation:** each project receives its own generated source directory and preview process rather than overwriting the CrewOS application.
-- **Product-first UI:** runtime, registry, memory, and event views are kept as developer diagnostics while the main product flow focuses on Chat, Projects, Engineering, and previewable output.
-
-### Where Codex improved iteration speed
-
-Codex was especially effective during repeated full-stack iteration: tracing runtime event loops that blocked planning, converting the generated workspace into a runnable Vite app, repairing missing generated stylesheet imports, and making previews resolve to the correct project rather than a shared development server. These changes shortened the feedback loop between an AI-generated artifact and a visible, inspectable product result.
