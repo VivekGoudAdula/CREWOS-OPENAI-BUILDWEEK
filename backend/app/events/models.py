@@ -1,0 +1,19 @@
+from datetime import datetime
+from enum import Enum
+from typing import Any
+from uuid import uuid4
+from pydantic import BaseModel, Field
+from app.schemas.common import utcnow
+class EventType(str, Enum):
+    PROJECT_CREATED='PROJECT_CREATED'; CEO_STARTED='CEO_STARTED'; CEO_COMPLETED='CEO_COMPLETED'; PM_STARTED='PM_STARTED'; TASK_CREATED='TASK_CREATED'; TIMELINE_CREATED='TIMELINE_CREATED'; KANBAN_CREATED='KANBAN_CREATED'; PROJECT_READY='PROJECT_READY'; TASK_UPDATED='TASK_UPDATED'; TASK_COMPLETED='TASK_COMPLETED'; TASK_REJECTED='TASK_REJECTED'; MESSAGE='MESSAGE'; MESSAGE_SENT='MESSAGE_SENT'; MESSAGE_RECEIVED='MESSAGE_RECEIVED'; CONFLICT_DETECTED='CONFLICT_DETECTED'; DECISION_CREATED='DECISION_CREATED'; NOTIFICATION_SENT='NOTIFICATION_SENT'; ACTIVITY_UPDATED='ACTIVITY_UPDATED'; AGENT_STATUS_UPDATED='AGENT_STATUS_UPDATED'; MEETING_STARTED='MEETING_STARTED'; MEETING_ENDED='MEETING_ENDED'; BUG_FOUND='BUG_FOUND'; DECISION_REQUEST='DECISION_REQUEST'; DECISION_RESPONSE='DECISION_RESPONSE'; MEMORY_UPDATED='MEMORY_UPDATED'; SYSTEM_EVENT='SYSTEM_EVENT'; AGENT_ONLINE='AGENT_ONLINE'; AGENT_OFFLINE='AGENT_OFFLINE'; PROJECT_PLANNING_REQUEST='PROJECT_PLANNING_REQUEST'; CEO_STRATEGY_CREATED='CEO_STRATEGY_CREATED'; ROADMAP_CREATED='ROADMAP_CREATED'
+class EventStatus(str, Enum): PENDING='pending'; DISPATCHED='dispatched'; PROCESSED='processed'; FAILED='failed'
+class Event(BaseModel):
+    event_id: str = Field(default_factory=lambda:str(uuid4()))
+    type: EventType
+    source: str
+    targets: list[str] = Field(default_factory=list)
+    priority: int = Field(default=5, ge=1, le=10)
+    timestamp: datetime = Field(default_factory=utcnow)
+    payload: dict[str, Any] = Field(default_factory=dict)
+    status: EventStatus = EventStatus.PENDING
+    correlation_id: str | None = None
