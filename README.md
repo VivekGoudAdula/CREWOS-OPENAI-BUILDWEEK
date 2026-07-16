@@ -6,6 +6,29 @@
 
 CrewOS is a full-stack platform for observing an AI company at work. Start in **Chat** with a product idea; CrewOS plans the work through its runtime, creates a dedicated project workspace, generates source code through Azure OpenAI, and exposes the generated application inside the Engineering workspace.
 
+## How Codex Was Used
+
+Codex accelerated implementation while the project team retained ownership of the product direction, runtime boundaries, and architectural tradeoffs.
+
+### What Codex accelerated
+
+- FastAPI and React scaffolding, API wiring, Pydantic contracts, authentication, and test foundations.
+- Enterprise UI implementation for Chat, Projects, Departments, Engineering, source inspection, and embedded live preview.
+- Azure OpenAI provider integration, generated-workspace support, patch/diff handling, and project-specific preview routing.
+- Debugging bcrypt compatibility, Vite module failures, planning-event feedback loops, stale repository IDs, and preview isolation.
+
+### Decisions owned by the project team
+
+- **Event-driven runtime:** all agents communicate through a reusable event bus rather than direct agent-to-agent calls.
+- **Clear responsibility boundaries:** CEO owns strategy, PM owns roadmap planning, Engineering owns generated workspaces/code, and QA remains isolated for validation.
+- **Provider abstraction:** Azure OpenAI is behind a code-generation interface so agent logic is not coupled to one vendor.
+- **Workspace isolation:** every project owns a separate local source tree and preview process.
+- **Product-first experience:** Chat, Projects, Engineering, and visual output are primary; runtime internals remain developer diagnostics.
+
+### Where Codex improved iteration speed
+
+Codex shortened the loop between an idea, a working full-stack implementation, and visible output—especially when repairing runtime event loops, converting generated source into a runnable Vite application, and ensuring each generated project receives its own live preview rather than sharing another project’s UI.
+
 ## What it does
 
 - Secure account registration, login, refresh-token support, and protected routes.
@@ -14,6 +37,32 @@ CrewOS is a full-stack platform for observing an AI company at work. Start in **
 - Project-specific Engineering workspaces with repository tree, readable source files, patch history, and local live-preview support.
 - Azure OpenAI-backed code generation provider—kept behind an interface so the runtime is not tied to one model provider.
 - Enterprise-style React UI for Chat, Projects, Mission Control, Engineering, Quality, Analytics, and developer diagnostics.
+
+## Feature tour
+
+### Chat: start an AI company from one prompt
+
+![CrewOS Chat](frontend/public/chat.png)
+
+Chat is the primary entry point after sign-in. A natural-language product brief activates the company planning workflow—there is no separate “generate tasks” or “generate roadmap” button.
+
+### Live agent workflow: watch the company organize itself
+
+![CrewOS agent workflow](frontend/public/flow.png)
+
+The planning flow makes agent participation visible: the CEO defines strategy, the PM creates the roadmap, and specialist departments contribute context through the runtime event bus.
+
+### Project dossier: preserve every planned outcome
+
+![CrewOS project dossier](frontend/public/project.png)
+
+Each completed project becomes a retained company record with its executive summary, vision, epics, tasks, milestones, dependencies, estimated effort, and generated-workspace link.
+
+### Departments: inspect the AI organization
+
+![CrewOS departments](frontend/public/departments.png)
+
+The Departments directory shows the company’s registered AI employees, their department, role, capabilities, health, and current state.
 
 ## Architecture
 
