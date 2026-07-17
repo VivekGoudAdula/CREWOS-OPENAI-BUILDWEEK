@@ -1,7 +1,5 @@
-import asyncio
-import os
-import subprocess
 import difflib
+import html
 from pathlib import Path
 from app.engineering.models import CodeReview, Patch, Repository, RepositoryAnalysis
 class EngineeringService:
@@ -31,25 +29,19 @@ class EngineeringService:
         root=Path(repo.workspace);candidate=root/'frontend';return candidate if (candidate/'package.json').is_file() else (root if (root/'package.json').is_file() else None)
     def _preview_prefix(self,repo:Repository)->str:
         return f'/api/v1/repository/{repo.repository_id}/preview/'
-    def _preview_is_stale(self,frontend:Path,output:Path)->bool:
-        index=output/'index.html'
-        if not index.is_file(): return True
-        sources=[frontend/'index.html',frontend/'package.json',frontend/'vite.config.js',frontend/'vite.config.ts']
-        source_dir=frontend/'src'
-        if source_dir.is_dir(): sources.extend(path for path in source_dir.rglob('*') if path.is_file())
-        return any(path.is_file() and path.stat().st_mtime > index.stat().st_mtime for path in sources)
     async def build_preview(self,repo:Repository)->Path:
         frontend=self._frontend_root(repo)
         if frontend is None: raise ValueError('This generated workspace does not contain a frontend preview yet')
-        output=frontend/'dist'
-        if not self._preview_is_stale(frontend,output): return output
-        npm='npm.cmd' if os.name=='nt' else 'npm'
-        if not (frontend/'node_modules').is_dir():
-            await asyncio.to_thread(subprocess.run,[npm,'install'],cwd=frontend,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
-        vite=frontend/'node_modules'/'.bin'/('vite.cmd' if os.name=='nt' else 'vite')
-        if not vite.is_file(): raise ValueError('Preview dependencies are still installing. Please wait a moment and try again.')
-        await asyncio.to_thread(subprocess.run,[str(vite),'build','--base',self._preview_prefix(repo)],cwd=frontend,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
-        if not (output/'index.html').is_file(): raise ValueError('The generated preview build did not produce an index page')
+        output=frontend/'.crewos_preview';output.mkdir(exist_ok=True)
+        preview=output/'index.html'
+        dedicated=frontend/'preview.html'
+        if dedicated.is_file():
+            preview.write_text(dedicated.read_text(encoding='utf-8'),encoding='utf-8')
+        elif not preview.is_file():
+            readme=Path(repo.workspace,'README.md')
+            source=readme.read_text(encoding='utf-8',errors='ignore') if readme.is_file() else 'Generated product workspace'
+            title=html.escape(' '.join(source.split())[:96] or 'Generated product')
+            preview.write_text(f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title><style>*{{box-sizing:border-box}}body{{margin:0;font-family:Inter,Arial,sans-serif;background:#070b18;color:#f8fafc}}.hero{{min-height:100vh;padding:42px;background:radial-gradient(circle at 75% 12%,#7c3aed77,transparent 30%),radial-gradient(circle at 15% 72%,#06b6d477,transparent 34%),#070b18}}nav{{display:flex;justify-content:space-between;max-width:1120px;margin:auto;font-weight:800;font-size:22px}}.badge{{border:1px solid #ffffff35;border-radius:99px;padding:9px 14px;color:#cbd5e1;font-size:13px}}main{{max-width:1120px;margin:110px auto 0}}.eyebrow{{color:#67e8f9;text-transform:uppercase;letter-spacing:.16em;font-size:12px;font-weight:700}}h1{{font-size:clamp(44px,8vw,94px);line-height:.96;letter-spacing:-.065em;max-width:900px;margin:18px 0}}p{{font-size:18px;color:#cbd5e1;line-height:1.6;max-width:690px}}.cards{{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:55px}}.card{{background:#ffffff0d;border:1px solid #ffffff1f;border-radius:20px;padding:24px;backdrop-filter:blur(12px)}}.card b{{display:block;font-size:18px;margin-bottom:10px}}.card span{{color:#94a3b8;font-size:14px}}@media(max-width:700px){{.hero{{padding:24px}}main{{margin-top:72px}}.cards{{grid-template-columns:1fr}}}}</style></head><body><div class="hero"><nav><div>✦ CrewOS</div><span class="badge">Generated preview</span></nav><main><div class="eyebrow">CrewOS product workspace</div><h1>{title}</h1><p>This preview is served directly by CrewOS without starting a local development server, keeping the hosted runtime reliable.</p><div class="cards"><div class="card"><b>Designed for the brief</b><span>Project-specific product direction and visual system.</span></div><div class="card"><b>Implementation ready</b><span>Explore the repository below for the complete generated source.</span></div><div class="card"><b>Workspace live</b><span>Preview is safe to open from any browser.</span></div></div></main></div></body></html>''',encoding='utf-8')
         return output
     async def ensure_preview(self,repo:Repository)->str:
         await self.build_preview(repo)
