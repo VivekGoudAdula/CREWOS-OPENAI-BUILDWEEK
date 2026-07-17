@@ -6,6 +6,11 @@
 
 CrewOS is a full-stack platform for observing an AI company at work. Start in **Chat** with a product idea; CrewOS plans the work through its runtime, creates a dedicated project workspace, generates source code through Azure OpenAI, and exposes the generated application inside the Engineering workspace.
 
+## Live demo
+
+- **Deployed application:** [crewos-openai-buildweek.vercel.app](https://crewos-openai-buildweek.vercel.app/)
+- **Video walkthrough:** [Watch the CrewOS demo on YouTube](https://youtu.be/lysLK1d7AMQ)
+
 ## How Codex Was Used
 
 Codex accelerated implementation while the project team retained ownership of the product direction, runtime boundaries, and architectural tradeoffs.
