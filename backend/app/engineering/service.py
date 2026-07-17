@@ -26,7 +26,10 @@ class EngineeringService:
         if root not in target.parents or not target.is_file():raise ValueError('File is not available in this repository')
         return target.read_text(encoding='utf-8')
     def _frontend_root(self,repo:Repository)->Path|None:
-        root=Path(repo.workspace);candidate=root/'frontend';return candidate if (candidate/'package.json').is_file() else (root if (root/'package.json').is_file() else None)
+        root=Path(repo.workspace);candidate=root/'frontend'
+        # A preview must be available while source generation is still in progress;
+        # do not require package.json or any JavaScript tooling to exist first.
+        return candidate if candidate.is_dir() else root
     def _preview_prefix(self,repo:Repository)->str:
         return f'/api/v1/repository/{repo.repository_id}/preview/'
     async def build_preview(self,repo:Repository)->Path:
